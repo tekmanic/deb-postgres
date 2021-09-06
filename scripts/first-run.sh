@@ -2,9 +2,9 @@
 
 set -e
 
-USER=${POSTGRES_USERNAME:-pgadmin}
+USER=${POSTGRES_USER:-pgadmin}
 PASS=${POSTGRES_PASSWORD:-$(pwgen -s -1 16)}
-DB=${POSTGRES_DBNAME:-}
+DB=${POSTGRES_DB:-}
 EXTENSIONS=${POSTGRES_EXTENSIONS:-}
 
 echo First run of PostgreSQL, setting up users...
