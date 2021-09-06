@@ -8,7 +8,7 @@ if [ ! -f $DATA_DIR/postgresql.conf ]; then
     mkdir -p $DATA_DIR
     chown postgres:postgres /data
 
-    sudo -u postgres /usr/lib/postgresql/${PG_VERSION:?required}/bin/initdb -E utf8 --locale en_US.UTF-8 -D $DATA_DIR
+    su - postgres -c '/usr/lib/postgresql/${PG_VERSION:?required}/bin/initdb -E utf8 --locale en_US.UTF-8 -D /data'
     sed -i -e"s/^#listen_addresses =.*$/listen_addresses = '*'/" $DATA_DIR/postgresql.conf
     echo  "shared_preload_libraries='pg_stat_statements'">> $DATA_DIR/postgresql.conf
     echo "host    all    all    0.0.0.0/0    md5" >> $DATA_DIR/pg_hba.conf
@@ -20,9 +20,11 @@ chmod -R 700 /data
 
 # Initialize first run
 if [[ -e /.firstrun ]]; then
+    ln -s /usr/lib/postgresql/13/bin/postgres /usr/bin/postgres
+    chown -h postgres:postgres /usr/bin/postgres
     /scripts/first-run.sh
 fi
 
 # Start PostgreSQL
 echo "Starting PostgreSQL..."
-sudo -u postgres /usr/lib/postgresql/${PG_VERSION}/bin/postgres -D /data
+su - postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/postgres -D /data'
