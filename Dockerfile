@@ -1,5 +1,5 @@
 # base image
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 LABEL org.opencontainers.image.authors="tekmanic"
 
 # Install PostgreSQL 13

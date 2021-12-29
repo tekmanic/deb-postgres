@@ -14,12 +14,28 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 
-# ignore comments files
-todo.txt
-notes.txt
-
-# ignore mac generated files
+# MAC OS Specific
 .DS_Store
+.AppleDouble
+.LSOverride
+.Trashes
+
+# Ignore test/build output directories
+coverage/*
+build/*
+bin/*
+test/*
+dist/*
+
+# Ignore the node_modules directory
+web/node_modules
+
+# Ignore configs
+configs/*.json
+configs/.env
+
+# Ignore application output directory
+tmp/*
 
 # ignore pycharm ide
 .idea
@@ -30,3 +46,7 @@ notes.txt
 # ignore virtual env
 venv
 .venv
+
+# ignore comments files
+todo.txt
+notes.txt
