@@ -1,0 +1,108 @@
+- name: Install Python3
+  raw: apt update && apt upgrade -y && apt install python3 -y
+
+- name: Setup - install common dependencies
+  apt:
+    pkg:
+      - rsync
+      - ca-certificates
+      - build-essential
+      - curl
+      - git-core
+      - gpp
+      - cpp
+      - pkg-config
+      - apt-transport-https
+      - cmake
+      - ninja-build
+      - python
+      - acl
+      - ssl-cert
+      - gnupg2
+      - lsb-release
+    update_cache: yes
+    install_recommends: no
+
+# Add the postgres repository to apt
+- name: add postgres apt-key
+  apt_key: 
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc 
+    state: present 
+
+- name: add postgres apt repository
+  apt_repository: 
+    repo: deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_lsb.codename|lower }}-pgdg main
+    state: present 
+    filename: postgres 
+    update_cache: yes
+
+# Create postgres user
+- name: Create postgres user
+  user:
+    name: postgres
+    shell: /bin/bash
+    comment: Postgres user
+    groups: ssl-cert
+
+- name: Recursively change ownership of a directory
+  file:
+    path: /var/lib/postgresql
+    state: directory
+    recurse: yes
+    owner: postgres
+    group: postgres
+
+# Create /etc/postgresql directory and make sure postgres group owns it
+- name: Create a directory if it does not exist
+  file:
+    path: /etc/postgresql
+    state: directory
+    owner: postgres
+    group: postgres
+
+- name: Create logs dir
+  become: yes
+  file:
+    path: /var/log/postgresql
+    state: directory
+    owner: postgres
+    group: postgres
+
+# Find platform architecture and set as a variable
+- name: Setup - finding platform architecture
+  shell: if [ $(uname -m) = "aarch64" ]; then echo "arm64";  else echo "amd64"; fi
+  register: platform_output
+- set_fact:
+    platform: "{{ platform_output.stdout }}"
+
+- name: Setup - import postgresql.conf
+  synchronize:
+    src: files/postgresql.conf.j2
+    dest: /etc/postgresql/postgresql.conf
+
+- name: Setup - import postgresql.conf
+  synchronize:
+    src: files/pg_hba.conf.j2
+    dest: /etc/postgresql/pg_hba.conf
+
+- name: Setup - import postgresql.conf
+  synchronize:
+    src: files/pg_ident.conf.j2
+    dest: /etc/postgresql/pg_ident.conf
+
+- set_fact:
+    regex_string: "#unix_socket_directories = '/tmp'"
+
+- name: Setup - modify unix_socket_directories
+  become: yes
+  replace:
+    path: /etc/postgresql/postgresql.conf
+    regexp: '{{ regex_string }}'
+    replace: unix_socket_directories = '/var/run/postgresql'
+
+- name: Setup - modify unix_socket_directories
+  become: yes
+  replace:
+    path: /etc/postgresql/postgresql.conf
+    regexp: '{{ regex_string }}'
+    replace: unix_socket_directories = '/var/run/postgresql'

@@ -1,30 +1,14 @@
 #!/bin/bash
 
-cd /var/lib/postgresql
-
-# Initialize data directory
-DATA_DIR=/data
-if [ ! -f $DATA_DIR/postgresql.conf ]; then
-    mkdir -p $DATA_DIR
-    chown postgres:postgres /data
-
-    su - postgres -c '/usr/lib/postgresql/${PG_VERSION:?required}/bin/initdb -E utf8 --locale en_US.UTF-8 -D /data'
-    sed -i -e"s/^#listen_addresses =.*$/listen_addresses = '*'/" $DATA_DIR/postgresql.conf
-    echo  "shared_preload_libraries='pg_stat_statements'">> $DATA_DIR/postgresql.conf
-    echo "host    all    all    0.0.0.0/0    md5" >> $DATA_DIR/pg_hba.conf
-
-    mkdir -p $DATA_DIR/pg_log
-fi
-chown -R postgres:postgres /data
-chmod -R 700 /data
+# Set data directory environment variable
+export PGDATA=/var/lib/postgresql/data
 
 # Initialize first run
 if [[ -e /.firstrun ]]; then
-    ln -s /usr/lib/postgresql/13/bin/postgres /usr/bin/postgres
-    chown -h postgres:postgres /usr/bin/postgres
-    /scripts/first-run.sh
+    /scripts/init-postgres.sh ${PGDATA}
 fi
 
 # Start PostgreSQL
 echo "Starting PostgreSQL..."
-su - postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/postgres -D /data'
+su -p postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/pg_ctl start'
+while true; do sleep 1000; done

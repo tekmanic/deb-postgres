@@ -36,6 +36,7 @@ configs/.env
 
 # Ignore application output directory
 tmp/*
+old/*
 
 # ignore pycharm ide
 .idea

@@ -1,0 +1,10 @@
+# postgis
+- name: postgis - download & install dependencies
+  apt:
+    pkg:
+      - postgis
+      - postgresql-{{ postgresql_major }}-postgis-{{ postgis_major }}
+      - postgresql-{{ postgresql_major }}-postgis-{{ postgis_major }}-scripts 
+    update_cache: yes
+    cache_valid_time: 3600
+    install_recommends: no

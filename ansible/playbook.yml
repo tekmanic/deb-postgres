@@ -1,0 +1,23 @@
+- name: Build Tekmanic Postgres
+  hosts: localhost
+  gather_facts: true
+
+  vars_files:
+    - ./vars.yml
+
+  vars:
+    sql_files:
+      - { source: "stat_extension.sql", dest: "01-extension.sql" }
+
+  tasks:
+    - name: Setup container
+      import_tasks: tasks/setup.yml
+
+    - name: Setup postgres
+      import_tasks: tasks/setup-postgres.yml
+
+    - name: Install Postgres extensions
+      import_tasks: tasks/setup-extensions.yml
+
+    - name: Cleanup container
+      import_tasks: tasks/cleanup.yml

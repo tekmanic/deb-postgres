@@ -6,16 +6,14 @@ USER=${POSTGRES_USER:-pgadmin}
 PASS=${POSTGRES_PASSWORD:-$(pwgen -s -1 16)}
 DB=${POSTGRES_DB:-}
 EXTENSIONS=${POSTGRES_EXTENSIONS:-}
+# PGDATA=$1
 
-echo First run of PostgreSQL, setting up users...
-
-mkdir -p /config
-echo "{\"hosthame\":\"localhost\",\"host\":\"localhost\",\"port\":5432,\"username\":\"$USER\",\"password\":\"$PASS\",\"dbname\":\"$DB\",\"uri\":\"postgres://$USER:$PASS@localhost:5432/$DB\"}" > /config/credentials.json
-echo /config/credentials.json
+echo "First run of PostgreSQL, Initializing PostgreSQL DB in ${PGDATA}..."
+su -p postgres -c '/usr/lib/postgresql/${PG_VERSION:?required}/bin/initdb -E utf8 --locale en_US.UTF-8'
 
 cd /var/lib/postgresql
 # Start PostgreSQL service
-su - postgres -c '/usr/lib/postgresql/${PG_VERSION:?required}/bin/postgres -D /data &'
+su -p postgres -c '/usr/lib/postgresql/${PG_VERSION:?required}/bin/pg_ctl start'
 
 while ! su - postgres -c 'psql -q -c "select true;"'; do sleep 1; done
 
@@ -28,7 +26,12 @@ psql -q -U postgres <<-EOF
     ALTER ROLE "$USER" WITH SUPERUSER;
     ALTER ROLE "$USER" WITH LOGIN;
 EOF
- 
+
+# Create the 'template_postgis' template db
+"${psql[@]}" <<- 'EOSQL'
+CREATE DATABASE template_postgis IS_TEMPLATE true;
+EOSQL
+
 # Create dabatase
 if [ ! -z "$DB" ]; then
     echo "Creating database: \"$DB\"..."
@@ -40,13 +43,16 @@ EOF
     if [[ ! -z "$EXTENSIONS" ]]; then
         for extension in $EXTENSIONS; do
             echo "Installing extension \"$extension\" for database \"$DB\"..."
-            psql -q -U postgres "$DB" -c "CREATE EXTENSION \"$extension\";"
+            psql -q -U postgres "$DB" -c "CREATE EXTENSION IF NOT EXISTS \"$extension\";"
         done
     fi
 fi
 
 # Stop PostgreSQL service
-su - postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/pg_ctl stop -m fast -w -D /data'
+su -p postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/pg_ctl stop -m fast -w'
+
+# Copy the desired configuration files into place
+cp -rp /etc/postgresql/*.conf /var/lib/postgresql/data/
 
 echo "========================================================================"
 echo "PostgreSQL User: \"$USER\""
