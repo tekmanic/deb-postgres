@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Set data directory environment variable
 export PGDATA=/var/lib/postgresql/data
 
@@ -10,5 +12,6 @@ fi
 
 # Start PostgreSQL
 echo "Starting PostgreSQL..."
-su -p postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/pg_ctl start'
+# -p preserves the environment (PGDATA); -s /bin/bash selects the shell explicitly
+su -p -s /bin/bash postgres -c '/usr/lib/postgresql/${PG_VERSION}/bin/pg_ctl start'
 while true; do sleep 1000; done
