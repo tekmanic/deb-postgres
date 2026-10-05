@@ -48,7 +48,7 @@ for ((n=0; n<$wait; n++)); do
     echo "Database is ready"
     break
   fi
-  print .
+  echo .
   sleep 1
 done
 psql ${uri} -c 'DROP TABLE IF EXISTS sanitytest;'

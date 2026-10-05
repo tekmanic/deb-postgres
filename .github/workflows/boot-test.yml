@@ -1,0 +1,53 @@
+name: Boot Test
+on: [push, pull_request]
+
+jobs:
+  boot-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build Image
+        run: |
+          docker build -t deb-postgres:test .
+
+      - name: Run Container
+        run: |
+          docker run -d -p 5432:5432 --name pg-test \
+            -e POSTGRES_USER=myuser \
+            -e POSTGRES_PASSWORD=mypassword \
+            -e POSTGRES_DB=mydb \
+            -e POSTGRES_EXTENSIONS='postgis vector pg_cron pgjwt pg_net pgmq pgrouting pgtap' \
+            deb-postgres:test
+
+      - name: Wait for Boot
+        run: |
+          # wait until the first-run init has finished creating the extensions
+          # (TCP + trust auth on 127.0.0.1: local socket uses peer auth, which
+          # fails for non-OS users like myuser)
+          timeout 120s bash -c 'until docker exec pg-test psql -h 127.0.0.1 -U myuser -d mydb -tAc "SELECT 1 FROM pg_extension WHERE extname = '\''vector'\''" 2>/dev/null | grep -q 1; do echo "Waiting for PostgreSQL + extensions..."; sleep 2; done'
+
+      - name: Validate extensions
+        run: |
+          for ext in pg_cron pgjwt pg_net pgmq postgis pgrouting pgtap vector; do
+            if [ "$ext" = "pg_cron" ]; then
+              db=postgres
+            else
+              db=mydb
+            fi
+            found=$(docker exec pg-test psql -h 127.0.0.1 -U myuser -d "$db" -tAc "SELECT 1 FROM pg_extension WHERE extname = '$ext';")
+            if [ "$found" != "1" ]; then
+              echo "MISSING extension: $ext (db: $db)"
+              exit 1
+            fi
+            echo "OK: $ext"
+          done
+
+      - name: Spot checks
+        run: |
+          docker exec pg-test psql -h 127.0.0.1 -U myuser -d mydb -tc "SELECT PostGIS_full_version();"
+          # pgvector has no vector_version() function — read the version from the catalog
+          docker exec pg-test psql -h 127.0.0.1 -U myuser -d mydb -tc "SELECT extversion FROM pg_extension WHERE extname = 'vector';"
+          # proves pg_cron is preloaded and created in the postgres db
+          docker exec pg-test psql -h 127.0.0.1 -U myuser -d postgres -tc "SELECT count(*) FROM cron.job;"
