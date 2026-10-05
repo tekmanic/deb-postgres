@@ -23,10 +23,21 @@ jobs:
 
       - name: Wait for Boot
         run: |
-          # wait until the first-run init has finished creating the extensions
+          # Gate on first-run init COMPLETING, not on a single extension:
+          # /.firstrun is removed at the very end of init-postgres.sh, after
+          # ALL extensions have been created. Waiting on one extension (e.g.
+          # 'vector', created 2nd of 8) let the checks start while init was
+          # still running and race with its final state.
           # (TCP + trust auth on 127.0.0.1: local socket uses peer auth, which
           # fails for non-OS users like myuser)
-          timeout 120s bash -c 'until docker exec pg-test psql -h 127.0.0.1 -U myuser -d mydb -tAc "SELECT 1 FROM pg_extension WHERE extname = '\''vector'\''" 2>/dev/null | grep -q 1; do echo "Waiting for PostgreSQL + extensions..."; sleep 2; done'
+          timeout 180s bash -c '
+            until docker exec pg-test test ! -e /.firstrun 2>/dev/null; do
+              echo "Waiting for first-run init to complete..."; sleep 2
+            done
+            until docker exec pg-test psql -h 127.0.0.1 -U myuser -d mydb -tAc "SELECT 1" >/dev/null 2>&1; do
+              echo "Waiting for PostgreSQL to accept connections..."; sleep 2
+            done
+          '
 
       - name: Validate extensions
         run: |

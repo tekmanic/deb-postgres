@@ -74,8 +74,10 @@ EOF
     fi
 fi
 
-# Stop PostgreSQL service
-su -p -s /bin/bash postgres -c "/usr/lib/postgresql/${PG_VERSION}/bin/pg_ctl stop -m fast -w"
+# Leave PostgreSQL running. run.sh detects the running instance and skips its
+# own start, so first boot has no stop/restart window. (The old stop+restart
+# here created a brief "database system is shutting down" window that early
+# connection probes could race against.)
 
 echo "========================================================================"
 echo "PostgreSQL User: \"$USER\""
