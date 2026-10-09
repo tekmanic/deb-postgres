@@ -25,7 +25,10 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GH_TOKEN }}
+          # Use the automatic GITHUB_TOKEN (the job declares `permissions:
+          # packages: write`), not a repo secret — there is no GH_TOKEN secret
+          # configured, so the old reference logged in with an empty password.
+          password: ${{ github.token }}
       - name: Sync GitHub README.md with Docker Hub
         uses: peter-evans/dockerhub-description@v5
         with:
